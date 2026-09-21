@@ -17,7 +17,7 @@ jobs:
     - name: Instalar herramientas necesarias
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget zim-tools python3
+        sudo apt-get install -y wget zim-tools python3 zip
 
     - name: Leer URLs desde archivo
       id: read_urls
@@ -51,7 +51,7 @@ jobs:
         echo "📦 Creando archivo ZIM..."
         cd downloaded-site
         
-        # Intentamos buscar el primer archivo HTML disponible dentro de la estructura descargada para usarlo de bienvenida
+        # Encontrar el archivo HTML y quitarle cualquier prefijo extraño si lo hubiera
         WELCOME_FILE=$(find . -name "*.html" | head -n 1 | sed 's|^\./||')
         
         if [ -z "$WELCOME_FILE" ]; then
@@ -59,11 +59,13 @@ jobs:
         else
           echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
           
-          # Ejecutamos zimwriterfs para empaquetar toda la carpeta descargada
+          # Ejecutamos zimwriterfs asegurándonos de pasar todos los obligatorios correctamente
           zimwriterfs --welcome="$WELCOME_FILE" \
                       --language=spa \
                       --title="Coleccion Offline ZIM" \
-                      --description="ZIM generado automaticamente desde GitHub Actions con multiples URLs" \
+                      --description="ZIM generado automaticamente desde GitHub Actions" \
+                      --creator="Lein" \
+                      --publisher="GitHub Actions" \
                       . \
                       ../sitio-generado.zim
           
