@@ -93,7 +93,6 @@ jobs:
         fi
 
     - name: Comprimir resultados (ZIP)
-    #
       run: |
         zip -r website-content.zip downloaded-site/ -x "*/.*" 2>/dev/null || true
 
@@ -103,7 +102,7 @@ jobs:
           echo "✅ ZIP creado exitosamente"
           echo "📦 Tamaño ZIP: $(du -h website-content.zip | cut -f1)"
         fi
-        if [ -f sitio-generado.zim ];
+        if [ -f sitio-generado.zim ]; then
           echo "✅ ZIM creado exitosamente"
           echo "📦 Tamaño ZIM: $(du -h sitio-generado.zim | cut -f1)"
         fi
