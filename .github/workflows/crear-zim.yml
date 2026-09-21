@@ -1,0 +1,49 @@
+name: Generar ZIM Dinámico
+
+on:
+  workflow_dispatch: # Permite lanzarlo manualmente cuando quieras
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4 # Necesario para que el Action pueda leer el archivo url.txt de tu repo
+
+      - name: Instalar herramientas necesarias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget zim-tools
+
+      - name: Leer URL y descargar con Wget
+        run: |
+          # Leemos la URL del archivo url.txt y eliminamos espacios o saltos de línea sobrantes
+          TARGET_URL=$(cat url.txt | tr -d '\r')
+          echo "Descargando URL: $TARGET_URL"
+          
+          # Descarga recursiva respetando robots y simulando navegador
+          wget --recursive --level=inf --convert-links --adjust-extension \
+               --page-requisites --no-parent --no-clobber \
+               --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+               "$TARGET_URL"
+
+      - name: Empaquetar archivos en formato ZIM
+        run: |
+          # Como la estructura de carpetas depende de la URL, buscamos el dominio descargado
+          # o empaquetamos el directorio resultante de forma general
+          DOMAIN=$(python3 -c "from urllib.parse import urlparse; print(urlparse('$(cat url.txt | tr -d '\r')').netloc)")
+          echo "Directorio detectado: $DOMAIN"
+          
+          cd "$DOMAIN"
+          
+          # Buscamos el archivo de bienvenida por defecto o puedes adaptar los parámetros
+          zimwriterfs --title="Guia Offline ZIM" \
+                      --language=spa \
+                      --description="Guia generada automaticamente desde GitHub Actions" \
+                      ../guia-salida.zim .
+
+      - name: Subir el archivo ZIM resultante
+        uses: actions/upload-artifact@v4
+        with:
+          name: archivo-zim-generado
+          path: guia-salida.zim
