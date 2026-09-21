@@ -1,69 +1,95 @@
-name: Generar ZIM Dinámico Universal
+name: Descargar y Crear ZIM
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'url.txt'
 
 jobs:
-  build:
+  download-and-build:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
+    - name: Checkout código
+      uses: actions/checkout@v4
 
-      - name: Instalar herramientas necesarias
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget zim-tools python3
+    - name: Instalar herramientas necesarias
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget zim-tools python3
 
-      - name: Leer URL y descargar con Wget
-        run: |
-          TARGET_URL=$(cat url.txt | tr -d '\r')
-          echo "Descargando URL: $TARGET_URL"
+    - name: Leer URLs desde archivo
+      id: read_urls
+      run: |
+        if [ -f "url.txt" ]; then
+          URL_COUNT=$(grep -c '^https\?://' url.txt || echo "0")
+          echo "Número de URLs encontradas: $URL_COUNT"
+          echo "url_count=$URL_COUNT" >> $GITHUB_OUTPUT
           
-          # Descarga recursiva universal
-          wget --recursive --level=inf --convert-links --adjust-extension \
-               --page-requisites --no-parent --no-clobber \
-               --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-               "$TARGET_URL"
+          echo "📋 URLs a descargar:"
+          grep '^https\?://' url.txt || echo "No se encontraron URLs válidas"
+        else
+          echo "❌ Error: No se encontró el archivo url.txt"
+          exit 1
+        fi
 
-      - name: Detectar bienvenida y empaquetar en ZIM
-        run: |
-          DOMAIN=$(python3 -c "from urllib.parse import urlparse; print(urlparse('$(cat url.txt | tr -d '\r')').netloc)")
-          echo "Directorio detectado: $DOMAIN"
-          
-          cd "$DOMAIN"
-          
-          # Buscamos automáticamente un archivo de bienvenida común (index.html, welcome.html, main.html, etc.)
-          WELCOME_FILE=""
-          for file in index.html welcome.html home.html default.html; do
-            if [ -f "$file" ]; then
-              WELCOME_FILE="$file"
-              break
-            fi
-          done
-          
-          # Si no está en la raíz, buscamos cualquier archivo .html principal o el primero que encuentre
-          if [ -z "$WELCOME_FILE" ]; then
-            WELCOME_FILE=$(find . -maxdepth 3 -name "*.html" | head -n 1 | sed 's|^\./||')
+    - name: Descargar páginas web
+      run: |
+        mkdir -p downloaded-site
+        cd downloaded-site
+        
+        while IFS= read -r url; do
+          if [[ $url =~ ^https?:// ]]; then
+            echo "⬇️ Descargando: $url"
+            wget --no-check-certificate --mirror --convert-links --no-parent --page-requisites --no-verbose "$url" || echo "⚠️ Error descargando: $url"
           fi
+        done < ../url.txt
+
+    - name: Generar archivo ZIM
+      run: |
+        echo "📦 Creando archivo ZIM..."
+        cd downloaded-site
+        
+        # Intentamos buscar el primer archivo HTML disponible dentro de la estructura descargada para usarlo de bienvenida
+        WELCOME_FILE=$(find . -name "*.html" | head -n 1 | sed 's|^\./||')
+        
+        if [ -z "$WELCOME_FILE" ]; then
+          echo "⚠️ Advertencia: No se encontró ningún archivo HTML, se omite la creación del ZIM."
+        else
+          echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
           
-          echo "Archivo de bienvenida detectado: $WELCOME_FILE"
-          
-          if [ -z "$WELCOME_FILE" ]; then
-            echo "Error: No se encontró ningún archivo HTML principal para el ZIM."
-            exit 1
-          fi
-          
-          # Empaquetamos usando los datos detectados de forma genérica
+          # Ejecutamos zimwriterfs para empaquetar toda la carpeta descargada
           zimwriterfs --welcome="$WELCOME_FILE" \
                       --language=spa \
-                      --title="Documentacion Offline" \
-                      --description="Archivo ZIM generado automaticamente desde GitHub Actions" \
+                      --title="Coleccion Offline ZIM" \
+                      --description="ZIM generado automaticamente desde GitHub Actions con multiples URLs" \
                       . \
-                      ../archivo-salida.zim
+                      ../sitio-generado.zim
+          
+          echo "✅ Archivo ZIM creado con éxito."
+        fi
 
-      - name: Subir el archivo ZIM resultante
-        uses: actions/upload-artifact@v4
-        with:
-          name: archivo-zim-generado
-          path: archivo-salida.zim
+    - name: Comprimir resultados (ZIP)
+      run: |
+        zip -r website-content.zip downloaded-site/ -x "*/.*" 2>/dev/null || true
+
+    - name: Verificar resultados
+      run: |
+        if [ -f website-content.zip ]; then
+          echo "✅ ZIP creado exitosamente"
+          echo "📦 Tamaño ZIP: $(du -h website-content.zip | cut -f1)"
+        fi
+        if [ -f sitio-generado.zim ]; then
+          echo "✅ ZIM creado exitosamente"
+          echo "📦 Tamaño ZIM: $(du -h sitio-generado.zim | cut -f1)"
+        fi
+
+    - name: Subir artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: contenido-offline-zim
+        path: |
+          website-content.zip
+          sitio-generado.zim
+        retention-days: 30
