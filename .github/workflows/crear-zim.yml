@@ -70,12 +70,13 @@ jobs:
         else
           echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
           
-          # Construir el comando de zimwriterfs dinámicamente incluyendo --name (obligatorio)
+          # Construir el comando de zimwriterfs con descripciones válidas
           ZIM_ARGS=(
             --welcome="$WELCOME_FILE"
             --language=spa
             --title="Coleccion Offline ZIM"
-            --description="ZIM generado automaticamente desde GitHub Actions"
+            --description="Coleccion de guias offline"
+            --longDescription="Coleccion completa de paginas y guias descargadas para consulta offline, generada automaticamente desde GitHub Actions."
             --creator="Lein"
             --publisher="GitHub Actions"
             --name="guia-offline-nintendo"
@@ -92,6 +93,7 @@ jobs:
         fi
 
     - name: Comprimir resultados (ZIP)
+    #
       run: |
         zip -r website-content.zip downloaded-site/ -x "*/.*" 2>/dev/null || true
 
@@ -101,7 +103,7 @@ jobs:
           echo "✅ ZIP creado exitosamente"
           echo "📦 Tamaño ZIP: $(du -h website-content.zip | cut -f1)"
         fi
-        if [ -f sitio-generado.zim ]; then
+        if [ -f sitio-generado.zim ];
           echo "✅ ZIM creado exitosamente"
           echo "📦 Tamaño ZIM: $(du -h sitio-generado.zim | cut -f1)"
         fi
