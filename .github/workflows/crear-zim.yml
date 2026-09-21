@@ -62,13 +62,27 @@ jobs:
 
         cd downloaded-site
         
-        # Encontrar el archivo HTML principal
-        WELCOME_FILE=$(find . -name "*.html" | head -n 1 | sed 's|^\./||')
+        # Búsqueda inteligente del archivo principal de bienvenida
+        WELCOME_FILE=""
+        
+        # 1. Buscar si existe explícitamente un welcome.html
+        if [ -n "$(find . -name "welcome.html" -print -quit)" ]; then
+          WELCOME_FILE=$(find . -name "welcome.html" -print -quit | sed 's|^\./||')
+        # 2. Buscar si existe un index.html
+        elif [ -n "$(find . -name "index.html" -print -quit)" ]; then
+          WELCOME_FILE=$(find . -name "index.html" -print -quit | sed 's|^\./||')
+        # 3. Buscar un archivo que contenga 'index' o 'main'
+        elif [ -n "$(find . -iname "*index*.html" -print -quit)" ]; then
+          WELCOME_FILE=$(find . -iname "*index*.html" -print -quit | sed 's|^\./||')
+        # 4. Si no encuentra ninguno de los anteriores, toma el primer html disponible que no sea un recurso secundario menor
+        else
+          WELCOME_FILE=$(find . -name "*.html" | head -n 1 | sed 's|^\./||')
+        fi
         
         if [ -z "$WELCOME_FILE" ]; then
           echo "⚠️ Advertencia: No se encontró ningún archivo HTML, se omite la creación del ZIM."
         else
-          echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
+          echo "📄 Archivo de bienvenida seleccionado inteligentemente: $WELCOME_FILE"
           
           # Construir el comando de zimwriterfs con descripciones válidas
           ZIM_ARGS=(
