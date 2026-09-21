@@ -57,7 +57,7 @@ jobs:
           ICON_PATH="icon.png"
           echo "🎨 Archivo icon.png encontrado en la raíz."
         else
-          echo "⚠️ Advertencia: No se encontró icon.png en la raíz. Se continuará sin ilustración o usando una por defecto si es necesario."
+          echo "⚠️ Advertencia: No se encontró icon.png en la raíz. Se continuará sin ilustración."
         fi
 
         cd downloaded-site
@@ -70,7 +70,7 @@ jobs:
         else
           echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
           
-          # Construir el comando de zimwriterfs dinámicamente según la existencia del icono
+          # Construir el comando de zimwriterfs dinámicamente incluyendo --name (obligatorio)
           ZIM_ARGS=(
             --welcome="$WELCOME_FILE"
             --language=spa
@@ -78,6 +78,7 @@ jobs:
             --description="ZIM generado automaticamente desde GitHub Actions"
             --creator="Lein"
             --publisher="GitHub Actions"
+            --name="guia-offline-nintendo"
           )
           
           if [ -n "$ICON_PATH" ] && [ -f "../$ICON_PATH" ]; then
@@ -113,3 +114,4 @@ jobs:
           website-content.zip
           sitio-generado.zim
         retention-days: 30
+
