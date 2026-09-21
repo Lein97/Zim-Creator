@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'url.txt'
+      - 'icon.png'
 
 jobs:
   download-and-build:
@@ -49,6 +50,16 @@ jobs:
     - name: Generar archivo ZIM
       run: |
         echo "📦 Creando archivo ZIM..."
+        
+        # Verificar si el icono existe en la raíz del repositorio
+        ICON_PATH=""
+        if [ -f "icon.png" ]; then
+          ICON_PATH="icon.png"
+          echo "🎨 Archivo icon.png encontrado en la raíz."
+        else
+          echo "⚠️ Advertencia: No se encontró icon.png en la raíz. Se continuará sin ilustración o usando una por defecto si es necesario."
+        fi
+
         cd downloaded-site
         
         # Encontrar el archivo HTML principal
@@ -59,24 +70,22 @@ jobs:
         else
           echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
           
-          # Crear una ilustración PNG obligatoria de 48x48 usando Python y Pillow (o un script básico)
-          python3 -c "
-          from PIL import Image
-          img = Image.new('RGBA', (48, 48), (70, 130, 180, 255))
-          img.save('illustration.png')
-          "
-          echo "🎨 Ilustración de 48x48 generada."
+          # Construir el comando de zimwriterfs dinámicamente según la existencia del icono
+          ZIM_ARGS=(
+            --welcome="$WELCOME_FILE"
+            --language=spa
+            --title="Coleccion Offline ZIM"
+            --description="ZIM generado automaticamente desde GitHub Actions"
+            --creator="Lein"
+            --publisher="GitHub Actions"
+          )
           
-          # Ejecutamos zimwriterfs incluyendo la ilustración obligatoria
-          zimwriterfs --welcome="$WELCOME_FILE" \
-                      --illustration="illustration.png" \
-                      --language=spa \
-                      --title="Coleccion Offline ZIM" \
-                      --description="ZIM generado automaticamente desde GitHub Actions" \
-                      --creator="Lein" \
-                      --publisher="GitHub Actions" \
-                      . \
-                      ../sitio-generado.zim
+          if [ -n "$ICON_PATH" ] && [ -f "../$ICON_PATH" ]; then
+            ZIM_ARGS+=(--illustration="../$ICON_PATH")
+          fi
+          
+          # Ejecutamos zimwriterfs
+          zimwriterfs "${ZIM_ARGS[@]}" . ../sitio-generado.zim
           
           echo "✅ Archivo ZIM creado con éxito."
         fi
