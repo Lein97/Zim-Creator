@@ -51,7 +51,7 @@ jobs:
         echo "📦 Creando archivo ZIM..."
         cd downloaded-site
         
-        # Encontrar el archivo HTML y quitarle cualquier prefijo extraño si lo hubiera
+        # Encontrar el archivo HTML principal
         WELCOME_FILE=$(find . -name "*.html" | head -n 1 | sed 's|^\./||')
         
         if [ -z "$WELCOME_FILE" ]; then
@@ -59,8 +59,17 @@ jobs:
         else
           echo "📄 Archivo de bienvenida seleccionado: $WELCOME_FILE"
           
-          # Ejecutamos zimwriterfs asegurándonos de pasar todos los obligatorios correctamente
+          # Crear una ilustración PNG obligatoria de 48x48 usando Python y Pillow (o un script básico)
+          python3 -c "
+          from PIL import Image
+          img = Image.new('RGBA', (48, 48), (70, 130, 180, 255))
+          img.save('illustration.png')
+          "
+          echo "🎨 Ilustración de 48x48 generada."
+          
+          # Ejecutamos zimwriterfs incluyendo la ilustración obligatoria
           zimwriterfs --welcome="$WELCOME_FILE" \
+                      --illustration="illustration.png" \
                       --language=spa \
                       --title="Coleccion Offline ZIM" \
                       --description="ZIM generado automaticamente desde GitHub Actions" \
